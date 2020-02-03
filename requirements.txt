@@ -1,0 +1,8 @@
+Click==7.0
+Flask==1.1.1
+itsdangerous==1.1.0
+Jinja2==2.11.0
+MarkupSafe==1.1.1
+numpy==1.18.1
+opencv-python-headless==4.1.2.30
+Werkzeug==0.16.1
