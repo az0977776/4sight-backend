@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, request
 from video import Video
 
 app = Flask(__name__, template_folder="templates")
@@ -16,8 +16,8 @@ def gen(video):
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen(Video()),
+    return Response(gen(Video(request.args.get('vid'))),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0', debug=False)
