@@ -1,21 +1,23 @@
 #!/usr/bin/python
 
 import sqlite3
+from datetime import datetime, timedelta
 
+db_name = "test.db"
 
 class SQLConnection:
 
-    def __init__(self, db_name):
+    def __init__(self):
         self.conn = sqlite3.connect(db_name)
+
+    def __del__(self):
+        self.conn.close()
 
     def clear_database(self):
         self.conn.execute("drop table if exists area;")
         self.conn.execute("drop table if exists feed;")
         self.conn.execute("drop table if exists count;")
         self.conn.execute("drop table if exists prediction;")
-
-    def close(self):
-        self.conn.close()
 
     def init_database(self):
         self.conn.execute('''
@@ -57,12 +59,139 @@ class SQLConnection:
             );'''
         )
 
-    def add_area(self, id, name):
-        self.conn.execute("Insert into area (id, name) values ({}, {})".format(id, name))
+    def add_area(self, a_id, name):
+        cur = self.conn.cursor()
+        cur.execute("Insert into area(id, name) values (?, ?)", (a_id, name))
+        self.conn.commit()
+
+    def add_feed(self, f_id, name, url, a_id):
+        cur = self.conn.cursor()
+        cur.execute("Insert into feed(id, name, url, a_id) values (?, ?, ?, ?)", (f_id, name, url, a_id))
+        self.conn.commit()
+
+    def add_count(self, f_id, time, count):
+        cur = self.conn.cursor()
+        cur.execute("Insert into count(f_id, time, count) values (?, ?, ?)", (f_id, time, count))
+        self.conn.commit()
+
+    def add_prediction(self, f_id, time, count):
+        cur = self.conn.cursor()
+        cur.execute("Insert into prediction(f_id, time, count) values (?, ?, ?)", (f_id, time, count))
+        self.conn.commit()
+
+    def get_all_area(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM area")
+
+        rows = cur.fetchall()
+
+        ret = []
+        for r in rows:
+            ret.append({
+                "a_id": r[0],
+                "name": r[1]
+            })
+        return {"areas": ret}
+
+    def get_area_feeds(self, a_id):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM feed where a_id=?", (str(a_id)))
+
+        rows = cur.fetchall()
+
+        ret = []
+        for r in rows:
+            ret.append({
+                "f_id": r[0],
+                "name": r[1],
+                "url": r[2],
+                "a_id": r[3]
+            })
+        return {"feeds": ret}       
+
+    def get_feed(self, f_id):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM feed where id=?", (str(f_id)))
+
+        rows = cur.fetchall()
+        assert(len(rows) == 1)
+        feed = rows[0]
+
+        return {
+            "f_id": feed[0],
+            "name": feed[1],
+            "url": feed[2],
+            "a_id": feed[3],
+        }    
+
+    def get_counts(self, f_id, time_start=None, time_end=None):
+        
+        # default interval start time is an hour ago
+        if not time_start:
+            time_start = datetime.now() - timedelta(hours=1)
+
+        # default interval end time is current time
+        if not time_end:
+            time_end = datetime.now()
+
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM count where f_id=? and time between ? and ?", (str(f_id), time_start, time_end))
+
+        rows = cur.fetchall()
+
+        ret = []
+        for r in rows:
+            ret.append([r[1], r[2]])
+        return {
+            "f_id": f_id,
+            "counts": ret
+        }
+
+    def get_predictions(self, f_id, time_start=None, time_end=None):
+        
+        # default interval start time is now
+        if not time_start:
+            time_start = datetime.now()
+
+        # default interval end time is an hour in the future
+        if not time_end:
+            time_end = datetime.now() + timedelta(hours=1)
+
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM prediction where f_id=? and time between ? and ?", (str(f_id), time_start, time_end))
+
+        rows = cur.fetchall()
+        ret = []
+        for r in rows:
+            ret.append([r[1], r[2]])
+        return {
+            "f_id": f_id,
+            "prediction": ret
+        }
 
 
 if __name__ == "__main__":
-    s = SQLConnection("test.db")
+    videos = [
+        [0, "food_court", "http://32.208.120.218/mjpg/video.mjpg", 0],
+        [1, "laundromat", "http://81.14.37.24:8080/mjpg/video.mjpg", 0],
+        [2, "shops", "http://87.139.9.247/mjpg/video.mjpg", 0],
+        [3, "hair_salon", "http://220.240.123.205/mjpg/video.mjpg", 0],
+        [4, "town_park", "http://89.29.108.38/mjpg/video.mjpg", 0],
+        [5, "time_square", "http://166.130.18.45:1024/mjpg/video.mjpg", 0]
+    ]
+
+    s = SQLConnection()
     s.clear_database()
     s.init_database()
-    s.close()
+
+    # populating the test.db with some dummy values
+    s.add_area(0, "general_testing")
+    for v in videos:
+        s.add_feed(v[0], v[1], v[2], v[3])
+
+    for i in range(10):
+        s.add_count(3, datetime.now() - timedelta(minutes=i * 15), 3 + i)
+        s.add_prediction(3, datetime.now() +  timedelta(minutes=i * 15), 20 + i)
+
+    print(s.get_counts(3, datetime.now() - timedelta(days=1)))
+    print(s.get_predictions(3, time_end=datetime.now() + timedelta(days=1)))
