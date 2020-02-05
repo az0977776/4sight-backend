@@ -35,12 +35,12 @@ def feeds(a_id):
     db = SQLConnection()
     return db.get_area_feeds(a_id)
 
-@app.route('/count/<f_id>', methods=['GET'])
+@app.route('/counts/<f_id>', methods=['GET'])
 def count(f_id):
     db = SQLConnection()
     return db.get_counts(f_id, time_start=datetime.now() - timedelta(days=1))
 
-@app.route('/prediction/<f_id>', methods=['GET'])
+@app.route('/predictions/<f_id>', methods=['GET'])
 def prediction(f_id):
     db = SQLConnection()
     return db.get_predictions(f_id, time_end=datetime.now() + timedelta(days=1))

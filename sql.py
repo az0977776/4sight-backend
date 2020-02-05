@@ -95,7 +95,7 @@ class SQLConnection:
 
     def get_area_feeds(self, a_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM feed where a_id=?", (str(a_id)))
+        cur.execute("SELECT * FROM feed where a_id=?", (str(a_id),))
 
         rows = cur.fetchall()
 
@@ -111,7 +111,7 @@ class SQLConnection:
 
     def get_feed(self, f_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM feed where id=?", (str(f_id)))
+        cur.execute("SELECT * FROM feed where id=?", (str(f_id),))
 
         rows = cur.fetchall()
         assert(len(rows) == 1)
