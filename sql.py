@@ -42,20 +42,20 @@ class SQLConnection:
         self.conn.execute('''
             CREATE TABLE IF NOT EXISTS count
             (
-                f_id INTEGER NOT NULL,
+                a_id INTEGER NOT NULL,
                 time TIMESTAMP NOT NULL,
                 count INTEGER NOT NULL,
-                FOREIGN KEY (f_id) REFERENCES feed(id)
+                FOREIGN KEY (a_id) REFERENCES area(id)
             );'''
         )
 
         self.conn.execute('''
             CREATE TABLE IF NOT EXISTS prediction
             (
-                f_id INTEGER NOT NULL,
+                a_id INTEGER NOT NULL,
                 time TIMESTAMP NOT NULL,
                 count INTEGER NOT NULL,
-                FOREIGN KEY (f_id) REFERENCES feed(id)
+                FOREIGN KEY (a_id) REFERENCES area(id)
             );'''
         )
 
@@ -69,15 +69,24 @@ class SQLConnection:
         cur.execute("Insert into feed(id, name, url, a_id) values (?, ?, ?, ?)", (f_id, name, url, a_id))
         self.conn.commit()
 
-    def add_count(self, f_id, time, count):
+    def add_count(self, a_id, time, count):
         cur = self.conn.cursor()
-        cur.execute("Insert into count(f_id, time, count) values (?, ?, ?)", (f_id, time, count))
+        cur.execute("Insert into count(a_id, time, count) values (?, ?, ?)", (a_id, time, count))
         self.conn.commit()
 
-    def add_prediction(self, f_id, time, count):
+    def add_prediction(self, a_id, time, count):
         cur = self.conn.cursor()
-        cur.execute("Insert into prediction(f_id, time, count) values (?, ?, ?)", (f_id, time, count))
+        cur.execute("Insert into prediction(a_id, time, count) values (?, ?, ?)", (a_id, time, count))
         self.conn.commit()
+
+    def get_area_name(self, a_id):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM area where id=?", (str(a_id)))
+        rows = cur.fetchall()
+        if len(rows) == 0:
+            return ""
+        assert(len(rows) == 1)
+        return rows[0][1]
 
     def get_all_area(self):
         cur = self.conn.cursor()
@@ -89,7 +98,7 @@ class SQLConnection:
         for r in rows:
             ret.append({
                 "a_id": r[0],
-                "name": r[1]
+                "a_name": r[1]
             })
         return {"areas": ret}
 
@@ -103,29 +112,35 @@ class SQLConnection:
         for r in rows:
             ret.append({
                 "f_id": r[0],
-                "name": r[1],
+                "f_name": r[1],
                 "url": r[2],
-                "a_id": r[3]
             })
-        return {"feeds": ret}       
+
+        return {
+            "a_id": a_id,
+            "a_name": self.get_area_name(a_id),
+            "count": self.get_most_recent_count(a_id),
+            "feeds": ret
+        }       
 
     def get_feed(self, f_id):
         cur = self.conn.cursor()
         cur.execute("SELECT * FROM feed where id=?", (str(f_id),))
 
         rows = cur.fetchall()
+        if len(rows) == 0:
+            return {}
         assert(len(rows) == 1)
         feed = rows[0]
 
         return {
             "f_id": feed[0],
-            "name": feed[1],
+            "f_name": feed[1],
             "url": feed[2],
             "a_id": feed[3],
         }    
 
-    def get_counts(self, f_id, time_start=None, time_end=None):
-        
+    def get_counts(self, a_id, time_start=None, time_end=None):
         # default interval start time is an hour ago
         if not time_start:
             time_start = datetime.now() - timedelta(hours=1)
@@ -135,7 +150,7 @@ class SQLConnection:
             time_end = datetime.now()
 
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM count where f_id=? and time between ? and ?", (str(f_id), time_start, time_end))
+        cur.execute("SELECT * FROM count where a_id=? and time between ? and ?", (str(a_id), time_start, time_end))
 
         rows = cur.fetchall()
 
@@ -143,12 +158,21 @@ class SQLConnection:
         for r in rows:
             ret.append([r[1], r[2]])
         return {
-            "f_id": f_id,
+            "a_id": a_id,
+            "a_name": self.get_area_name(a_id),
             "counts": ret
         }
 
-    def get_predictions(self, f_id, time_start=None, time_end=None):
-        
+    def get_most_recent_count(self, a_id):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * FROM count where a_id=? ORDER BY datetime(time) DESC LIMIT 1", (str(a_id)))
+
+        rows = cur.fetchall()
+        if len(rows) == 0:
+            return 0
+        return rows[0][2]
+
+    def get_predictions(self, a_id, time_start=None, time_end=None):
         # default interval start time is now
         if not time_start:
             time_start = datetime.now()
@@ -158,17 +182,17 @@ class SQLConnection:
             time_end = datetime.now() + timedelta(hours=1)
 
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM prediction where f_id=? and time between ? and ?", (str(f_id), time_start, time_end))
+        cur.execute("SELECT * FROM prediction where a_id=? and time between ? and ?", (str(a_id), time_start, time_end))
 
         rows = cur.fetchall()
         ret = []
         for r in rows:
             ret.append([r[1], r[2]])
         return {
-            "f_id": f_id,
+            "a_id": a_id,
+            "a_name": self.get_area_name(a_id),
             "prediction": ret
         }
-
 
 if __name__ == "__main__":
     videos = [
@@ -190,8 +214,8 @@ if __name__ == "__main__":
         s.add_feed(v[0], v[1], v[2], v[3])
 
     for i in range(10):
-        s.add_count(3, datetime.now() - timedelta(minutes=i * 15), 3 + i)
-        s.add_prediction(3, datetime.now() +  timedelta(minutes=i * 15), 20 + i)
+        s.add_count(0, datetime.now() - timedelta(minutes=i * 15), 3 + i)
+        s.add_prediction(0, datetime.now() +  timedelta(minutes=i * 15), 20 + i)
 
-    print(s.get_counts(3, datetime.now() - timedelta(days=1)))
-    print(s.get_predictions(3, time_end=datetime.now() + timedelta(days=1)))
+    print(s.get_counts(0, datetime.now() - timedelta(days=1)))
+    print(s.get_predictions(0, time_end=datetime.now() + timedelta(days=1)))
