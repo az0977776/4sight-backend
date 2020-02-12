@@ -108,6 +108,9 @@ class SQLConnection:
 
         rows = cur.fetchall()
 
+        if len(rows) == 0:
+            return {}
+
         ret = []
         for r in rows:
             ret.append({

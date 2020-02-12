@@ -6,21 +6,21 @@ class Video():
     def __init__(self, f_id):
         db = SQLConnection()
         feed_info = db.get_feed(f_id)
-        
         self.previous_frame = None
-        self.url = feed_info["url"]
-        self.vid_cap = cv2.VideoCapture(self.url)
-        # self.vid_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        # self.vid_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
-        # self.vid_cap.set(cv2.CAP_PROP_FPS, 1)
-        # print(self.vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        # print(self.vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        # print(self.vid_cap.get(cv2.CAP_PROP_FPS))
+        if feed_info:
+            self.url = feed_info["url"]
+            self.vid_cap = cv2.VideoCapture(self.url)
+            self.exist = True
+        else:
+            self.exist = False
     
     def __del__(self):
-        self.vid_cap.release()
+        if self.exist:
+            self.vid_cap.release()
 
     def get_frame(self):
+        if not self.exist:
+            return self.previous_frame
         # d = time()
         # print("starting ")
         # grab image from url
