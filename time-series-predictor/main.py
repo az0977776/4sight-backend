@@ -1,26 +1,8 @@
 import pandas as pd 
 from fbprophet import Prophet
-import matplotlib
+from fbprophet.plot import add_changepoints_to_plot
+import matplotlib.pyplot as plt
 import numpy
-
-
-def main():
-    df = pd.read_csv("reformatted.csv")
-    df = df.loc[:1 * 28 * 24, :]
-    m = Prophet(changepoint_prior_scale=0.01)
-    m.add_country_holidays(country_name='US')
-    # m.add_seasonality(name='daily', period=1, fourier_order=20)
-    # m.add_seasonality(name='monthly', period=30, fourier_order=5)
-    m.fit(df)
-
-    future = m.make_future_dataframe(periods=24 * 7, freq='H')
-    forecast = m.predict(future)
-    print(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail())
-    fig1 = m.plot(forecast)
-    fig2 = m.plot_components(forecast)
-    matplotlib.pyplot.show(fig1) 
-    matplotlib.pyplot.show(fig2) 
-    
 
 time_conversion = {
     "5AM-6AM": "05:00:00",
@@ -61,9 +43,51 @@ def reformat_data():
             ret.loc[counter] = new_row
             counter += 1
 
-    ret.dropna(subset = ["y"], inplace=True)
-    print(ret)
-    ret.to_csv("reformatted.csv", sep=',')
+    #ret.dropna(subset = ["y"], inplace=True)
+    ret.fillna(0)
+    ret.to_csv("reformatted.csv", sep=',', index=False)
+
+def main():
+    # how many hours to predict
+    predict_hours = 24 * 7 * 1
+
+    df = pd.read_csv("reformatted.csv")
+    df['ds'] = pd.to_datetime(df['ds'])
+        
+    # create the prophet model
+    m = Prophet(daily_seasonality=True, weekly_seasonality=True, yearly_seasonality='auto')
+    # m.add_country_holidays(country_name='US')
+
+    # fit the model based on the training data
+    start_date = "01-23-2018"
+    end_date = "02-23-2018"
+    training_mask = (df['ds'] > start_date) & (df['ds'] <= end_date)
+    training_data = df.loc[training_mask]
+    m.fit(training_data)
+
+    # the actual recorded values
+    # start_date2 = "01-22-2019"
+    # end_date2 = "01-24-2019"
+    # actual_mask = (df['ds'] > start_date2) & (df['ds'] <= end_date2)
+    # actual_df = df.loc[actual_mask]
+
+    # predicts the requested predict_hours
+    future = m.make_future_dataframe(periods=predict_hours, freq='H')
+    forecast = m.predict(future)
+
+    prediction = m.plot(forecast)
+    # a = add_changepoints_to_plot(prediction.gca(), m, forecast)
+    components = m.plot_components(forecast)
+    plt.show()
+
+    # look at predicted values with actual values
+    # forecast["y_actual"] = actual_df["y"]
+    # comparison = forecast.loc[actual_mask]
+    # tmp = comparison[['ds','yhat','y_actual']]
+
+    # plt.figure()
+    # plt.plot(comparison["ds"], comparison["yhat"], 'b', comparison["ds"], comparison["y_actual"], 'g')
+    # plt.show()
 
 if __name__ == "__main__":
     main()
