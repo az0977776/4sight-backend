@@ -62,7 +62,7 @@ def reformat_data():
 
 def main():
     # how many hours to predict
-    predict_hours = 24 * 15 * 1
+    predict_hours = 24 * 14 * 1
     # for the logistic growth, capping to total people at once to 500 and min to 0
     p_cap = 500
     p_floor = 0
@@ -77,15 +77,15 @@ def main():
     m.add_country_holidays(country_name='US')
 
     # fit the model based on the training data
-    start_date = "02-01-2018 05:00:00"
-    end_date = "04-01-2018 00:00:00"
+    start_date = "01-31-2018 05:00:00"
+    end_date = "01-31-2019 00:00:00"
     training_mask = (df['ds'] >= start_date) & (df['ds'] < end_date)
     training_data = df.loc[training_mask]
     m.fit(training_data)
 
     # the actual recorded values
-    start_date2 = "04-01-2018 05:00:00"
-    end_date2 = "04-15-2018 00:00:00"
+    start_date2 = "02-01-2019 05:00:00"
+    end_date2 = "02-14-2019 00:00:00"
     actual_mask = (df['ds'] >= start_date2) & (df['ds'] < end_date2)
     actual_df = df.loc[actual_mask]
 

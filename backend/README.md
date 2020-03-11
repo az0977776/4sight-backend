@@ -1,6 +1,12 @@
 # huskyspot-backend
 backend for huskyspot
 
+## Recording Counts
+A count of the number of people in each area is recorded every hour. For each feed, an single image is processed each hour using the people counting model. The model returns the number of people in each feed image and the numbers are summed to get the area count and stored into the database.
+
+## Predictions
+Predicted counts are also created hourly. For each area, the time series predictor looks at existing data up to a year and predicts up to two weeks in advance. The existing data is pulled from the database and the predicted data will be stored into the database.
+
 ## To install requirements
 
 ```bash

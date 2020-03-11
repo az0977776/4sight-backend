@@ -61,22 +61,34 @@ class SQLConnection:
 
     def add_area(self, a_id, name):
         cur = self.conn.cursor()
-        cur.execute("Insert into area(id, name) values (?, ?)", (a_id, name))
+        cur.execute("Insert into area(id, name) values (?, ?);", (a_id, name))
         self.conn.commit()
 
     def add_feed(self, f_id, name, url, a_id):
         cur = self.conn.cursor()
-        cur.execute("Insert into feed(id, name, url, a_id) values (?, ?, ?, ?)", (f_id, name, url, a_id))
+        cur.execute("Insert into feed(id, name, url, a_id) values (?, ?, ?, ?);", (f_id, name, url, a_id))
         self.conn.commit()
 
     def add_count(self, a_id, time, count):
         cur = self.conn.cursor()
-        cur.execute("Insert into count(a_id, time, count) values (?, ?, ?)", (a_id, time, count))
+        cur.execute("Insert into count(a_id, time, count) values (?, ?, ?);", (a_id, time, count))
         self.conn.commit()
 
     def add_prediction(self, a_id, time, count):
         cur = self.conn.cursor()
-        cur.execute("Insert into prediction(a_id, time, count) values (?, ?, ?)", (a_id, time, count))
+        cur.execute("Insert into prediction(a_id, time, count) values (?, ?, ?);", (a_id, time, count))
+        self.conn.commit()
+
+    # predictions is an array of (a_id, time, count)
+    def add_predictions(self, predictions):
+        cur = self.conn.cursor()
+        cur.executemany("Insert into prediction(a_id, time, count) values (?, ?, ?);", predictions)
+        assert(cur.rowcount == len(predictions))
+        self.conn.commit()
+
+    def remove_old_predictions(self):
+        cur = self.conn.cursor()
+        cur.execute("DELETE from prediction where time < ?;", (datetime.now(),))
         self.conn.commit()
 
     def get_area_name(self, a_id):
@@ -90,7 +102,7 @@ class SQLConnection:
 
     def get_all_area(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM area")
+        cur.execute("SELECT * FROM area;")
 
         rows = cur.fetchall()
 
@@ -104,7 +116,7 @@ class SQLConnection:
 
     def get_area_feeds(self, a_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM feed where a_id=?", (str(a_id),))
+        cur.execute("SELECT * FROM feed where a_id=?;", (str(a_id),))
 
         rows = cur.fetchall()
 
@@ -128,7 +140,7 @@ class SQLConnection:
 
     def get_feed(self, f_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM feed where id=?", (str(f_id),))
+        cur.execute("SELECT * FROM feed where id=?;", (str(f_id),))
 
         rows = cur.fetchall()
         if len(rows) == 0:
@@ -153,7 +165,7 @@ class SQLConnection:
             time_end = datetime.now()
 
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM count where a_id=? and time between ? and ?", (str(a_id), time_start, time_end))
+        cur.execute("SELECT * FROM count where a_id=? and time between ? and ?;", (str(a_id), time_start, time_end))
 
         rows = cur.fetchall()
 
@@ -168,7 +180,7 @@ class SQLConnection:
 
     def get_most_recent_count(self, a_id):
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM count where a_id=? ORDER BY datetime(time) DESC LIMIT 1", (str(a_id)))
+        cur.execute("SELECT * FROM count where a_id=? ORDER BY datetime(time) DESC LIMIT 1;", (str(a_id)))
 
         rows = cur.fetchall()
         if len(rows) == 0:
@@ -185,7 +197,7 @@ class SQLConnection:
             time_end = datetime.now() + timedelta(hours=1)
 
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM prediction where a_id=? and time between ? and ?", (str(a_id), time_start, time_end))
+        cur.execute("SELECT * FROM prediction where a_id=? and time between ? and ?;", (str(a_id), time_start, time_end))
 
         rows = cur.fetchall()
         ret = []
